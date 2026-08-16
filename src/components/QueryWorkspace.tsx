@@ -36,8 +36,8 @@ const PRESET_QUERIES = [
   '1971 Bangladesh yudh aur 1999 Kargil yudh ke bare me batao',
   'Tarain aur Panipat ke yudh kiske beech huye the?',
   'Bharat ka rashtrapati aur pradhan mantri kaun hai?',
-  'Chandrayaan-3 aur Shiv Shakti Point kya hai?',
-  '1983 aur 2011 Cricket World Cup victories batao',
+  'Narmade Har Jindagi Bhar',
+  'Developed by -SparkMinds (Ranveer,Ankit)',
 ];
 
 export const QueryWorkspace: React.FC<QueryWorkspaceProps> = (props) => {
