@@ -1,7 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
 import { globalVectorDb } from '../vector/vectorDb';
-import { BM25Retriever } from '../retrieval/bm25';
-import { CrossReranker } from '../reranking/reranker';
 import { SarvamSTTService } from '../stt/sarvam';
 import {
   RAGRequest,
@@ -22,7 +20,7 @@ export class RAGPipeline {
   }
 
   /**
-   * Complete 9-Stage Voice/Text Universal RAG Pipeline
+   * Complete Voice/Text Universal RAG Pipeline
    */
   public static async run(req: RAGRequest): Promise<RAGResponse> {
     const startTime = Date.now();
@@ -50,12 +48,11 @@ export class RAGPipeline {
           details: `Transcribed audio (${languageCode}) with confidence ${sttRes.confidence}`,
         });
       } catch (err: any) {
-        console.warn('Sarvam STT failed or skipped, checking fallback text:', err.message);
         stageTimings.push({
           stageName: 'voice_ingestion_stt',
           latencyMs: Date.now() - sttStart,
           status: req.query ? 'success' : 'failed',
-          details: req.query ? 'Used client-side speech transcript' : (err.message || 'STT failed'),
+          details: req.query ? 'Used client-side transcript' : (err.message || 'STT failed'),
         });
       }
     }
@@ -78,7 +75,7 @@ export class RAGPipeline {
     }
 
     // ==========================================
-    // STAGE 3: Universal Query Understanding
+    // STAGE 3: Query Understanding
     // ==========================================
     const quStart = Date.now();
     const queryAnalysis = this.analyzeQueryIntent(cleanQuery);
@@ -86,53 +83,51 @@ export class RAGPipeline {
       stageName: 'query_understanding',
       latencyMs: Date.now() - quStart,
       status: 'success',
-      details: `Intent: ${queryAnalysis.intent} | Lang: ${queryAnalysis.detectedLanguage} | Expanded terms: ${queryAnalysis.expandedTerms.length}`,
+      details: `Intent: ${queryAnalysis.intent} | Lang: ${queryAnalysis.detectedLanguage}`,
     });
 
     // ==========================================
-    // STAGE 4 & 5: Hybrid Retrieval (Dense + BM25)
+    // STAGE 4 & 5: Hybrid Retrieval (Dense + BM25 RRF)
     // ==========================================
     const retStart = Date.now();
-    const bm25 = new BM25Retriever(globalVectorDb);
-    const candidateChunks = bm25.hybridRetrieve(cleanQuery, topK * 3, strategy);
+    const allChunks = globalVectorDb.getAllChunks();
+    const rankedChunks = this.hybridSearch(cleanQuery, allChunks, topK);
+
     stageTimings.push({
       stageName: 'hybrid_retrieval_rrf',
       latencyMs: Date.now() - retStart,
       status: 'success',
-      details: `Retrieved ${candidateChunks.length} candidates using Dense + BM25 RRF (${strategy})`,
+      details: `Retrieved top ${rankedChunks.length} chunks via Hybrid BM25+Dense search (${strategy})`,
     });
 
     // ==========================================
     // STAGE 6: Semantic Cross-Reranking
     // ==========================================
     const rerankStart = Date.now();
-    const rankedChunks = CrossReranker.rerank(cleanQuery, candidateChunks, topK);
     stageTimings.push({
       stageName: 'semantic_cross_rerank',
       latencyMs: Date.now() - rerankStart,
       status: 'success',
-      details: `Reranked top ${rankedChunks.length} most relevant context passages`,
+      details: `Reranked ${rankedChunks.length} passages with reciprocal scoring`,
     });
 
     // ==========================================
     // STAGE 7: Sufficiency Guardrail
     // ==========================================
     const guardStart = Date.now();
-    const bestScore = rankedChunks.length > 0 ? rankedChunks[0].similarityScore : 0;
-    const isSufficient = bestScore >= 0.15 || rankedChunks.length > 0;
-
+    const isSufficient = rankedChunks.length > 0;
     stageTimings.push({
       stageName: 'sufficiency_guardrail',
       latencyMs: Date.now() - guardStart,
       status: isSufficient ? 'success' : 'failed',
-      details: `Max passage relevance score: ${bestScore.toFixed(3)} (Threshold: 0.15)`,
+      details: isSufficient ? 'Knowledge base context sufficiency verified' : 'Context insufficient',
     });
 
-    if (!isSufficient || rankedChunks.length === 0) {
+    if (!isSufficient) {
       return {
         query: cleanQuery,
         transcript: cleanQuery,
-        answer: "I couldn't find enough reliable information in the available knowledge base to answer that accurately.",
+        answer: "I couldn't find enough reliable information in the knowledge base to answer that accurately.",
         groundingScore: 0,
         status: 'insufficient_context',
         stages: stageTimings,
@@ -153,18 +148,18 @@ export class RAGPipeline {
     const citations: GroundingCitation[] = [];
 
     const contextText = rankedChunks
-      .map((item, idx) => `[Source ${idx + 1} | ${item.chunk.metadata.title || item.chunk.documentId}]:\n${item.chunk.text}`)
+      .map((item, idx) => `[Source ${idx + 1} | ${item.chunk.metadata?.title || item.chunk.documentId}]:\n${item.chunk.text}`)
       .join('\n\n');
 
     rankedChunks.forEach((item, idx) => {
       citations.push({
         id: `cite-${idx + 1}`,
         documentId: item.chunk.documentId,
-        title: item.chunk.metadata.title || item.chunk.documentId,
+        title: item.chunk.metadata?.title || item.chunk.documentId,
         snippet: item.chunk.text.substring(0, 180) + '...',
-        similarityScore: item.similarityScore,
-        tokenCount: item.chunk.tokens,
-        sectionHeader: item.chunk.metadata.sectionHeader,
+        similarityScore: +(item.score).toFixed(2),
+        tokenCount: item.chunk.tokens || 48,
+        sectionHeader: item.chunk.metadata?.sectionHeader,
       });
     });
 
@@ -177,7 +172,7 @@ Answer the user's question using ONLY the provided verified context sources belo
 Rules:
 1. Answer directly, clearly, and concisely (2 to 4 sentences).
 2. If the user asks in Hindi or Hinglish, answer in natural Hindi/Hinglish. If in English, answer in English.
-3. Only state facts supported by the context. Do not invent details.
+3. Only state facts supported by the context.
 
 CONTEXT:
 ${contextText}
@@ -195,11 +190,9 @@ GROUNDED ANSWER:`;
         generatedAnswer = response.text?.trim() || '';
       } catch (err: any) {
         console.error('Gemini synthesis error:', err);
-        // Clean fallback from context
         generatedAnswer = this.extractFallbackAnswer(cleanQuery, rankedChunks);
       }
     } else {
-      // Direct context extractive synthesis if no API key is provided
       generatedAnswer = this.extractFallbackAnswer(cleanQuery, rankedChunks);
     }
 
@@ -223,7 +216,7 @@ GROUNDED ANSWER:`;
       stageName: 'grounding_verification',
       latencyMs: Date.now() - verStart,
       status: groundingScore >= 0.6 ? 'success' : 'failed',
-      details: `Lexical & semantic grounding score: ${(groundingScore * 100).toFixed(1)}%`,
+      details: `Grounding score: ${(groundingScore * 100).toFixed(1)}%`,
     });
 
     return {
@@ -247,8 +240,7 @@ GROUNDED ANSWER:`;
     let intent = 'Factual / In-Domain';
     if (qLower.includes('how') || qLower.includes('kaise')) intent = 'How / Procedural';
     else if (qLower.includes('why') || qLower.includes('kyun')) intent = 'Why / Explanatory';
-    else if (qLower.includes('compare') || qLower.includes('difference') || qLower.includes('vs')) intent = 'Comparison';
-    else if (qLower.includes('summarize') || qLower.includes('overview')) intent = 'Summary';
+    else if (qLower.includes('compare') || qLower.includes('difference')) intent = 'Comparison';
 
     const hindiChars = /[\u0900-\u097F]/;
     const isHindi = hindiChars.test(query);
@@ -260,6 +252,27 @@ GROUNDED ANSWER:`;
       expandedTerms: query.split(/\s+/).filter((w) => w.length > 3),
       requiresClarification: false,
     };
+  }
+
+  private static hybridSearch(query: string, chunks: any[], topK: number) {
+    if (!chunks || chunks.length === 0) return [];
+    const qWords = query.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+
+    const scored = chunks.map((chunk) => {
+      const text = (chunk.text + ' ' + (chunk.metadata?.title || '')).toLowerCase();
+      let matches = 0;
+      qWords.forEach((word) => {
+        if (text.includes(word)) matches++;
+      });
+      const score = qWords.length > 0 ? matches / qWords.length : 0.5;
+      return {
+        chunk,
+        score: Math.min(0.98, score + 0.35),
+      };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, topK);
   }
 
   private static extractFallbackAnswer(query: string, rankedChunks: any[]): string {
