@@ -35,7 +35,7 @@ async function startServer() {
     res.json({
       status: 'healthy',
       product: 'VAANI AI',
-      tagline: 'Speak. Search. Know.',
+      tagline: 'Speak. Search. Know. By VAANI-AI',
       developedBy: 'SparkMind – VAA',
       totalDocs: stats.totalDocuments,
       totalChunks: stats.totalChunks,
