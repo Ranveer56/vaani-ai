@@ -1,0 +1,7 @@
+{
+  "name": "VAANI AI",
+  "description": "Voice-powered answers grounded in trusted knowledge. Voice-first Retrieval-Augmented Intelligence system developed by SparkMind – VAA.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
