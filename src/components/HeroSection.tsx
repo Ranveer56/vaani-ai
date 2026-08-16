@@ -1,184 +1,129 @@
 import React from 'react';
-import { Mic, MicOff, ArrowDown, Sparkles, Volume2, ShieldCheck, Zap, Radio, Terminal } from 'lucide-react';
-import { VoiceVisualizer } from './VoiceVisualizer';
+import { Mic, ArrowDown, Sparkles, Volume2, ShieldCheck, Zap } from 'lucide-react';
+import { motion } from 'motion/react';
 
 interface HeroSectionProps {
-  isListening: boolean;
-  audioLevel: number;
-  isProcessing: boolean;
-  pipelineStage: string;
-  onToggleMic: () => void;
-  onExploreSystem: () => void;
-  onQuickQuery: (q: string) => void;
+  onStartVoice: () => void;
+  isRecording: boolean;
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({
-  isListening,
-  audioLevel,
-  isProcessing,
-  pipelineStage,
-  onToggleMic,
-  onExploreSystem,
-  onQuickQuery,
-}) => {
-  const getMicButtonLabel = () => {
-    if (isListening) return 'LISTENING...';
-    if (isProcessing) {
-      if (pipelineStage === 'speech_to_text') return 'TRANSCRIBING AUDIO...';
-      if (pipelineStage === 'vector_search' || pipelineStage === 'multi_strategy_retrieval') return 'SEARCHING KNOWLEDGE...';
-      if (pipelineStage === 'reranking') return 'RERANKING CANDIDATES...';
-      if (pipelineStage === 'rag_generation') return 'FORMING ANSWER...';
-      return 'UNDERSTANDING...';
-    }
-    return 'ASK VAANI';
-  };
-
+export const HeroSection: React.FC<HeroSectionProps> = ({ onStartVoice, isRecording }) => {
   return (
-    <section
-      id="hero"
-      className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-28 pb-16 overflow-hidden bg-grid-lines"
-    >
-      {/* Aurora Ambient Core Light */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[550px] bg-gradient-to-br from-cyan-500/15 via-indigo-600/15 to-violet-600/15 rounded-full blur-[140px] pointer-events-none" />
+    <div className="relative pt-6 sm:pt-12 pb-8 flex flex-col items-center text-center">
+      {/* Top Badge */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-400 text-xs font-mono tracking-wide mb-6 shadow-[0_0_20px_rgba(6,182,212,0.15)]"
+      >
+        <span className="flex h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+        <span>HACKATHON EDITION // SUB-200ms DUAL ENGINE</span>
+      </motion.div>
 
-      <div className="relative z-10 max-w-5xl w-full mx-auto flex flex-col items-center text-center">
-        {/* Eyebrow Pill with Live Pulse Beacon */}
-        <div
-          id="hero-eyebrow"
-          className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-xl border border-cyan-500/30 text-[11px] font-mono tracking-[0.25em] uppercase text-cyan-300 mb-8 shadow-lg shadow-cyan-950/40"
-        >
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping shadow-[0_0_8px_#22d3ee]" />
-          <span className="font-semibold">SPARKMIND • VOICE INTELLIGENCE</span>
-        </div>
+      {/* Main Headline */}
+      <motion.h1
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white max-w-4xl"
+      >
+        Speak. Search.{' '}
+        <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-400">
+          Know Instantly.
+        </span>
+      </motion.h1>
 
-        {/* Oversized Cinematic Heading */}
-        <h1
-          id="hero-title"
-          className="font-display font-extrabold text-5xl sm:text-7xl md:text-8xl lg:text-9xl text-white tracking-tight leading-[1.02] mb-6 select-none"
+      {/* Subheading */}
+      <motion.p
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="mt-6 text-base sm:text-lg text-slate-300 max-w-2xl font-normal leading-relaxed"
+      >
+        Ultra-low latency voice retrieval pipeline with hybrid BM25 + dense vector indexing, neural reranking, and verified zero-hallucination citations.
+      </motion.p>
+
+      {/* Primary Voice CTA Button */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.3 }}
+        className="mt-10 flex flex-col sm:flex-row items-center gap-4 z-20"
+      >
+        <button
+          id="hero-voice-btn"
+          type="button"
+          onClick={() => {
+            console.log('[VAANI] Hero Voice Button Clicked');
+            onStartVoice();
+          }}
+          className={`cursor-pointer group relative inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-semibold text-base transition-all duration-200 shadow-2xl ${
+            isRecording
+              ? 'bg-red-500 hover:bg-red-600 text-white shadow-[0_0_40px_rgba(239,68,68,0.6)] ring-4 ring-red-500/30 animate-pulse'
+              : 'bg-gradient-to-r from-cyan-500 via-teal-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-[0_0_35px_rgba(6,182,212,0.4)]'
+          }`}
         >
-          Speak.{' '}
-          <span className="text-gradient-aurora block sm:inline font-bold">
-            And let knowledge answer.
+          <div className="p-2 rounded-xl bg-black/20">
+            <Mic className={`w-5 h-5 ${isRecording ? 'animate-bounce text-white' : 'text-white'}`} />
+          </div>
+          <span className="font-medium tracking-wide">
+            {isRecording ? 'Stop Recording (Listening...)' : 'Start Voice Query'}
           </span>
-        </h1>
+          <Sparkles className="w-4 h-4 text-cyan-200 opacity-80 group-hover:rotate-12 transition-transform" />
+        </button>
 
-        {/* Supporting Editorial Copy */}
-        <p
-          id="hero-description"
-          className="text-base sm:text-lg md:text-xl text-slate-300 font-normal max-w-2xl mx-auto leading-relaxed mb-8 tracking-wide"
+        <a
+          href="#query"
+          className="inline-flex items-center gap-2 px-6 py-4 rounded-2xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-medium text-sm transition-all"
         >
-          <strong className="text-white font-semibold">VAANI AI</strong> transforms natural speech into grounded, verifiable answers through sub-200ms multi-strategy retrieval, Sarvam STT, and rigorous grounding guardrails.
-        </p>
+          <span>Explore Workspace</span>
+          <ArrowDown className="w-4 h-4 text-slate-400" />
+        </a>
+      </motion.div>
 
-        {/* Centerpiece 3D/Canvas AI Intelligence Core */}
-        <div className="my-3 relative">
-          <VoiceVisualizer
-            isListening={isListening}
-            audioLevel={audioLevel}
-            isProcessing={isProcessing}
-            statusText={
-              isListening
-                ? 'LISTENING TO VOICE'
-                : isProcessing
-                ? pipelineStage.toUpperCase().replace(/_/g, ' ')
-                : 'INTELLIGENCE CORE ACTIVE'
-            }
-            size={300}
-          />
+      {/* Feature Highlights Grid */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 w-full max-w-4xl"
+      >
+        <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 backdrop-blur-sm text-left">
+          <div className="flex items-center gap-2 text-cyan-400 text-xs font-mono mb-1">
+            <Zap className="w-3.5 h-3.5" />
+            <span>&lt; 200ms</span>
+          </div>
+          <p className="text-white text-sm font-semibold">End-to-End Latency</p>
+          <p className="text-slate-400 text-xs mt-0.5">Real-time voice retrieval</p>
         </div>
 
-        {/* Main Hero Microphone CTA */}
-        <div className="mt-8 flex flex-col sm:flex-row items-center gap-4">
-          <button
-            id="hero-mic-cta"
-            onClick={onToggleMic}
-            className={`group relative flex items-center gap-3.5 px-9 py-4 rounded-full font-bold text-sm tracking-wider uppercase transition-all duration-300 active:scale-95 shadow-2xl ${
-              isListening
-                ? 'bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-red-500/50 scale-105 animate-pulse'
-                : 'bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 text-slate-950 hover:shadow-cyan-400/40 hover:scale-[1.03]'
-            }`}
-          >
-            <div className={`p-1.5 rounded-full ${isListening ? 'bg-white/25' : 'bg-slate-950/15'}`}>
-              {isListening ? (
-                <MicOff className="w-4 h-4 text-white" />
-              ) : (
-                <Mic className="w-4 h-4 text-slate-950" />
-              )}
-            </div>
-            <span>{getMicButtonLabel()}</span>
-          </button>
-
-          <button
-            id="hero-explore-cta"
-            onClick={onExploreSystem}
-            className="flex items-center gap-2.5 px-7 py-4 rounded-full bg-slate-900/80 hover:bg-slate-800/90 border border-cyan-500/25 text-xs font-bold tracking-wider uppercase text-cyan-200 hover:text-white transition-all active:scale-95 shadow-lg shadow-cyan-950/30"
-          >
-            <span>EXPLORE THE SYSTEM</span>
-            <ArrowDown className="w-3.5 h-3.5 text-cyan-400" />
-          </button>
+        <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 backdrop-blur-sm text-left">
+          <div className="flex items-center gap-2 text-teal-400 text-xs font-mono mb-1">
+            <Volume2 className="w-3.5 h-3.5" />
+            <span>Multi-Lingual</span>
+          </div>
+          <p className="text-white text-sm font-semibold">Indian STT Voice Engine</p>
+          <p className="text-slate-400 text-xs mt-0.5">Hindi, English & Hinglish</p>
         </div>
 
-        {/* Quick Voice Prompt Pills */}
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-2.5 max-w-3xl">
-          <div className="flex items-center gap-1.5 text-[11px] text-cyan-400/80 uppercase tracking-widest font-mono mr-1 font-semibold">
-            <Terminal className="w-3 h-3 text-cyan-400" />
-            <span>TRY ASKING:</span>
+        <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 backdrop-blur-sm text-left">
+          <div className="flex items-center gap-2 text-indigo-400 text-xs font-mono mb-1">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>94%+</span>
           </div>
-          {[
-            "How do photovoltaic solar cells work?",
-            "Explain transformer self-attention mechanism",
-            "What did ISRO achieve with Chandrayaan-3?",
-            "What is the geography of Goa?",
-          ].map((prompt, i) => (
-            <button
-              key={i}
-              onClick={() => onQuickQuery(prompt)}
-              className="text-xs px-3.5 py-1.5 rounded-full bg-slate-900/70 hover:bg-cyan-500/15 border border-slate-700/60 hover:border-cyan-400/40 text-slate-300 hover:text-cyan-200 transition-all text-left truncate max-w-[280px] shadow-sm hover:shadow-cyan-950/40"
-            >
-              "{prompt}"
-            </button>
-          ))}
+          <p className="text-white text-sm font-semibold">Grounding Verification</p>
+          <p className="text-slate-400 text-xs mt-0.5">Zero-hallucination guardrail</p>
         </div>
 
-        {/* Feature Badges Bento Row */}
-        <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-4xl pt-8 border-t border-cyan-500/15 text-left font-mono">
-          <div className="glass-card-cyan rounded-2xl p-4 transition-transform hover:-translate-y-1">
-            <div className="text-[10px] text-cyan-400/80 uppercase tracking-wider mb-1 flex items-center gap-1.5 font-bold">
-              <Zap className="w-3.5 h-3.5 text-cyan-400" />
-              <span>LATENCY TARGET</span>
-            </div>
-            <div className="text-base font-extrabold text-white tracking-tight">&lt; 200ms P50</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Microsecond stage telemetry</div>
+        <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 backdrop-blur-sm text-left">
+          <div className="flex items-center gap-2 text-amber-400 text-xs font-mono mb-1">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>4 Strategies</span>
           </div>
-
-          <div className="glass-card-violet rounded-2xl p-4 transition-transform hover:-translate-y-1">
-            <div className="text-[10px] text-violet-300 uppercase tracking-wider mb-1 flex items-center gap-1.5 font-bold">
-              <Volume2 className="w-3.5 h-3.5 text-violet-400" />
-              <span>STT ENGINE</span>
-            </div>
-            <div className="text-base font-extrabold text-white tracking-tight">Sarvam Speech AI</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Indic multilingual acoustic model</div>
-          </div>
-
-          <div className="glass-card-emerald rounded-2xl p-4 transition-transform hover:-translate-y-1">
-            <div className="text-[10px] text-emerald-300 uppercase tracking-wider mb-1 flex items-center gap-1.5 font-bold">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>GROUNDING</span>
-            </div>
-            <div className="text-base font-extrabold text-emerald-300 tracking-tight">Strict Verification</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Zero hallucination policy</div>
-          </div>
-
-          <div className="glass-card-cyan rounded-2xl p-4 transition-transform hover:-translate-y-1">
-            <div className="text-[10px] text-cyan-400/80 uppercase tracking-wider mb-1 flex items-center gap-1.5 font-bold">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>CORPUS</span>
-            </div>
-            <div className="text-base font-extrabold text-white tracking-tight">MSMARCO-XI</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">5 chunking strategies live</div>
-          </div>
+          <p className="text-white text-sm font-semibold">Dynamic Chunking</p>
+          <p className="text-slate-400 text-xs mt-0.5">Semantic & Hybrid Index</p>
         </div>
-      </div>
-    </section>
+      </motion.div>
+    </div>
   );
 };
